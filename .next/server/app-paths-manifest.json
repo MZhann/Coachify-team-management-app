@@ -1,0 +1,17 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/auth/logout/route": "app/api/auth/logout/route.js",
+  "/api/auth/register/route": "app/api/auth/register/route.js",
+  "/api/teams/route": "app/api/teams/route.js",
+  "/page": "app/page.js",
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/login/page": "app/login/page.js",
+  "/register/page": "app/register/page.js",
+  "/dashboard/analytics/page": "app/dashboard/analytics/page.js",
+  "/dashboard/matches/page": "app/dashboard/matches/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/tournaments/page": "app/dashboard/tournaments/page.js",
+  "/dashboard/trainings/page": "app/dashboard/trainings/page.js",
+  "/dashboard/discipline/page": "app/dashboard/discipline/page.js",
+  "/dashboard/players/page": "app/dashboard/players/page.js"
+}
