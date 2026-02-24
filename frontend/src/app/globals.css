@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --sidebar: 214 46% 23%;
+    --sidebar-foreground: 0 0% 100%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+  }
+  body {
+    @apply bg-gray-100 text-gray-900 antialiased;
+  }
+}
+
