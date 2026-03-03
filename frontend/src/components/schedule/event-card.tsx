@@ -10,7 +10,10 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
+  Users,
+  BarChart3,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -165,6 +168,26 @@ export function EventCard({
                 {event.notes}
               </p>
             )}
+
+            {/* Quick action link to detail page */}
+            <div className="flex items-center gap-3 pt-1">
+              <Link
+                href={`/dashboard/events/${event._id}`}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                <Users className="h-3.5 w-3.5" />
+                Attendance
+              </Link>
+              {isMatch && (
+                <Link
+                  href={`/dashboard/events/${event._id}`}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors"
+                >
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  Match Stats
+                </Link>
+              )}
+            </div>
           </div>
 
           {/* Coach actions menu */}
@@ -185,6 +208,13 @@ export function EventCard({
                     onClick={() => setMenuOpen(false)}
                   />
                   <div className="absolute right-0 top-8 z-40 w-44 rounded-lg border border-gray-200 bg-white shadow-lg py-1">
+                    <Link
+                      href={`/dashboard/events/${event._id}`}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <Users className="h-3.5 w-3.5" /> Attendance & Stats
+                    </Link>
                     <button
                       className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       onClick={() => {
@@ -236,4 +266,3 @@ export function EventCard({
     </Card>
   );
 }
-

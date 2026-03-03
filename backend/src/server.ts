@@ -9,6 +9,10 @@ import { connectDB } from "./config/db";
 import authRoutes from "./routes/auth";
 import teamRoutes from "./routes/teams";
 import eventRoutes from "./routes/events";
+import matchStatRoutes from "./routes/match-stats";
+import attendanceRoutes from "./routes/attendance";
+import noteRoutes from "./routes/notes";
+import dashboardRoutes from "./routes/dashboard";
 import { Team } from "./models/Team";
 
 const app = express();
@@ -40,6 +44,10 @@ app.use(cookieParser());
 app.use("/api/auth", authRoutes);
 app.use("/api/teams", teamRoutes);
 app.use("/api/events", eventRoutes);
+app.use("/api/match-stats", matchStatRoutes);
+app.use("/api/attendance", attendanceRoutes);
+app.use("/api/notes", noteRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // Health check — useful for Railway / uptime monitors
 app.get("/api/health", (_req, res) => {

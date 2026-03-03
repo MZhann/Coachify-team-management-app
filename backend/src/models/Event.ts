@@ -65,3 +65,4 @@ EventSchema.index({ teamId: 1, type: 1, date: 1 });
 export const Event: Model<IEvent> =
   mongoose.models.Event || mongoose.model<IEvent>("Event", EventSchema);
 
+
