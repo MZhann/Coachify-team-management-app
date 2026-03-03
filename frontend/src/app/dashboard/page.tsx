@@ -138,8 +138,11 @@ function daysUntil(iso: string) {
 function matchResult(m: EventItem): { label: string; color: string } {
   if (m.scoreHome == null || m.scoreAway == null)
     return { label: "—", color: "text-gray-400" };
-  if (m.scoreHome > m.scoreAway) return { label: "W", color: "text-green-600" };
-  if (m.scoreHome < m.scoreAway) return { label: "L", color: "text-red-600" };
+  // Determine OUR score vs OPPONENT score based on home/away
+  const ourScore = m.homeAway === "away" ? m.scoreAway : m.scoreHome;
+  const theirScore = m.homeAway === "away" ? m.scoreHome : m.scoreAway;
+  if (ourScore > theirScore) return { label: "W", color: "text-green-600" };
+  if (ourScore < theirScore) return { label: "L", color: "text-red-600" };
   return { label: "D", color: "text-amber-600" };
 }
 

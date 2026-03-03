@@ -89,8 +89,14 @@ router.get("/", async (req: AuthRequest, res: Response): Promise<void> => {
     let losses = 0;
     for (const m of allCompletedMatches) {
       if (m.scoreHome != null && m.scoreAway != null) {
-        if (m.scoreHome > m.scoreAway) wins++;
-        else if (m.scoreHome === m.scoreAway) draws++;
+        // Determine OUR score vs OPPONENT score based on home/away
+        const ourScore =
+          m.homeAway === "away" ? m.scoreAway : m.scoreHome;
+        const theirScore =
+          m.homeAway === "away" ? m.scoreHome : m.scoreAway;
+
+        if (ourScore > theirScore) wins++;
+        else if (ourScore === theirScore) draws++;
         else losses++;
       }
     }

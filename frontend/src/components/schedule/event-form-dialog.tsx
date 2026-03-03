@@ -45,6 +45,8 @@ export function EventFormDialog({
   const [opponent, setOpponent] = useState("");
   const [homeAway, setHomeAway] = useState<"home" | "away" | "neutral">("home");
   const [notes, setNotes] = useState("");
+  const [scoreHome, setScoreHome] = useState<number | "">("");
+  const [scoreAway, setScoreAway] = useState<number | "">("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -68,6 +70,8 @@ export function EventFormDialog({
       setOpponent(editEvent.opponent || "");
       setHomeAway(editEvent.homeAway || "home");
       setNotes(editEvent.notes || "");
+      setScoreHome(editEvent.scoreHome ?? "");
+      setScoreAway(editEvent.scoreAway ?? "");
     } else {
       // Reset form for new event
       setType(defaultType);
@@ -81,6 +85,8 @@ export function EventFormDialog({
       setOpponent("");
       setHomeAway("home");
       setNotes("");
+      setScoreHome("");
+      setScoreAway("");
     }
     setError("");
   }, [editEvent, open, defaultType, teams]);
@@ -123,6 +129,8 @@ export function EventFormDialog({
       if (type === "match") {
         body.opponent = opponent.trim();
         body.homeAway = homeAway;
+        if (isEdit && scoreHome !== "") body.scoreHome = Number(scoreHome);
+        if (isEdit && scoreAway !== "") body.scoreAway = Number(scoreAway);
       }
 
       const url = isEdit ? `/api/events/${editEvent!._id}` : "/api/events";
@@ -282,6 +290,44 @@ export function EventFormDialog({
                       <option value="away">Away</option>
                       <option value="neutral">Neutral</option>
                     </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Score (only when editing a match) */}
+              {type === "match" && isEdit && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Final Score
+                  </label>
+                  <div className="grid grid-cols-5 gap-2 items-center">
+                    <div className="col-span-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={scoreHome}
+                        onChange={(e) =>
+                          setScoreHome(e.target.value === "" ? "" : Number(e.target.value))
+                        }
+                        placeholder="Home"
+                        className="text-center font-bold"
+                      />
+                      <p className="text-xs text-gray-400 text-center mt-1">Home</p>
+                    </div>
+                    <div className="text-center text-lg font-bold text-gray-400">–</div>
+                    <div className="col-span-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={scoreAway}
+                        onChange={(e) =>
+                          setScoreAway(e.target.value === "" ? "" : Number(e.target.value))
+                        }
+                        placeholder="Away"
+                        className="text-center font-bold"
+                      />
+                      <p className="text-xs text-gray-400 text-center mt-1">Away</p>
+                    </div>
                   </div>
                 </div>
               )}

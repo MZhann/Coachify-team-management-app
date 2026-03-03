@@ -105,6 +105,12 @@ export default function EventDetailPage() {
   const [statsSaving, setStatsSaving] = useState(false);
   const [statsSaved, setStatsSaved] = useState(false);
 
+  // Score
+  const [scoreHome, setScoreHome] = useState<number | "">(0);
+  const [scoreAway, setScoreAway] = useState<number | "">(0);
+  const [scoreSaving, setScoreSaving] = useState(false);
+  const [scoreSaved, setScoreSaved] = useState(false);
+
   /* ─── Fetch event ─── */
   const fetchEvent = useCallback(async () => {
     try {
@@ -210,6 +216,9 @@ export default function EventDetailPage() {
       if (event.type === "match") {
         fetchMatchStats();
       }
+      // Populate score from event data
+      setScoreHome(event.scoreHome ?? "");
+      setScoreAway(event.scoreAway ?? "");
     }
   }, [event, fetchAttendance, fetchMatchStats]);
 
@@ -287,6 +296,30 @@ export default function EventDetailPage() {
       }
     } finally {
       setStatsSaving(false);
+    }
+  }
+
+  /* ─── Save score ─── */
+  async function saveScore() {
+    setScoreSaving(true);
+    setScoreSaved(false);
+    try {
+      const res = await fetch(`/api/events/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scoreHome: scoreHome === "" ? null : Number(scoreHome),
+          scoreAway: scoreAway === "" ? null : Number(scoreAway),
+          status: "completed",
+        }),
+      });
+      if (res.ok) {
+        setScoreSaved(true);
+        setTimeout(() => setScoreSaved(false), 2000);
+        fetchEvent(); // Refresh event to reflect new score & status
+      }
+    } finally {
+      setScoreSaving(false);
     }
   }
 
@@ -468,6 +501,111 @@ export default function EventDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ─── Score Input (Match only, Coach only) ─── */}
+      {isMatch && event.isCoach && (
+        <Card className="border-t-4 border-red-500">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Swords className="h-5 w-5 text-red-500" />
+              Match Score
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              {/* Home team */}
+              <div className="flex-1 text-center">
+                <p className="text-sm font-medium text-gray-500 mb-2">
+                  {event.homeAway === "away" ? (event.opponent || "Opponent") : "Your Team"}
+                </p>
+                <input
+                  type="number"
+                  min={0}
+                  value={scoreHome}
+                  onChange={(e) => setScoreHome(e.target.value === "" ? "" : Number(e.target.value))}
+                  className="w-24 h-16 text-center text-3xl font-bold rounded-lg border-2 border-gray-200 bg-gray-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all mx-auto block"
+                  placeholder="0"
+                />
+              </div>
+
+              {/* Separator */}
+              <div className="text-2xl font-bold text-gray-300 hidden sm:block">–</div>
+              <div className="text-sm font-bold text-gray-300 sm:hidden">vs</div>
+
+              {/* Away team */}
+              <div className="flex-1 text-center">
+                <p className="text-sm font-medium text-gray-500 mb-2">
+                  {event.homeAway === "away" ? "Your Team" : (event.opponent || "Opponent")}
+                </p>
+                <input
+                  type="number"
+                  min={0}
+                  value={scoreAway}
+                  onChange={(e) => setScoreAway(e.target.value === "" ? "" : Number(e.target.value))}
+                  className="w-24 h-16 text-center text-3xl font-bold rounded-lg border-2 border-gray-200 bg-gray-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all mx-auto block"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            {/* Save button */}
+            <div className="flex items-center justify-center gap-3 mt-4">
+              <Button
+                onClick={saveScore}
+                disabled={scoreSaving}
+                className="bg-red-600 hover:bg-red-700 text-white px-6"
+              >
+                {scoreSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                {scoreSaving ? "Saving..." : "Save Score & Mark Completed"}
+              </Button>
+              {scoreSaved && (
+                <span className="flex items-center gap-1 text-sm text-green-600">
+                  <CheckCircle2 className="h-4 w-4" /> Saved!
+                </span>
+              )}
+            </div>
+
+            {/* Current score display */}
+            {event.scoreHome != null && event.scoreAway != null && event.status === "completed" && (
+              <div className="mt-4 text-center">
+                <p className="text-xs text-gray-400">
+                  Current saved score:{" "}
+                  <span className="font-bold text-gray-700">
+                    {event.scoreHome} – {event.scoreAway}
+                  </span>
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Score display for players (non-coach) */}
+      {isMatch && !event.isCoach && event.scoreHome != null && event.scoreAway != null && (
+        <Card className="border-t-4 border-red-500">
+          <CardContent className="py-6">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <div className="text-center">
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  {event.homeAway === "away" ? (event.opponent || "Opponent") : "Your Team"}
+                </p>
+                <p className="text-4xl font-bold text-gray-900">{event.scoreHome}</p>
+              </div>
+              <div className="text-2xl font-bold text-gray-300">–</div>
+              <div className="text-center">
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  {event.homeAway === "away" ? "Your Team" : (event.opponent || "Opponent")}
+                </p>
+                <p className="text-4xl font-bold text-gray-900">{event.scoreAway}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-gray-200">

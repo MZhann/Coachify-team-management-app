@@ -111,17 +111,24 @@ export default function MatchesPage() {
     (e) => new Date(e.date) < now || e.status !== "scheduled"
   );
 
-  // Stats
+  // Stats — account for home/away when determining W/D/L
   const completed = events.filter((e) => e.status === "completed");
-  const wins = completed.filter(
-    (e) => e.scoreHome != null && e.scoreAway != null && e.scoreHome > e.scoreAway
-  );
-  const draws = completed.filter(
-    (e) => e.scoreHome != null && e.scoreAway != null && e.scoreHome === e.scoreAway
-  );
-  const losses = completed.filter(
-    (e) => e.scoreHome != null && e.scoreAway != null && e.scoreHome < e.scoreAway
-  );
+  const wins = completed.filter((e) => {
+    if (e.scoreHome == null || e.scoreAway == null) return false;
+    const our = e.homeAway === "away" ? e.scoreAway : e.scoreHome;
+    const their = e.homeAway === "away" ? e.scoreHome : e.scoreAway;
+    return our > their;
+  });
+  const draws = completed.filter((e) => {
+    if (e.scoreHome == null || e.scoreAway == null) return false;
+    return e.scoreHome === e.scoreAway;
+  });
+  const losses = completed.filter((e) => {
+    if (e.scoreHome == null || e.scoreAway == null) return false;
+    const our = e.homeAway === "away" ? e.scoreAway : e.scoreHome;
+    const their = e.homeAway === "away" ? e.scoreHome : e.scoreAway;
+    return our < their;
+  });
 
   if (loading) {
     return (
