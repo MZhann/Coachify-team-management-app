@@ -350,3 +350,4 @@ export function CreateTournamentDialog({ open, onOpenChange, onCreated }: Props)
   );
 }
 
+

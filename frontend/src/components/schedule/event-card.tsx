@@ -86,6 +86,35 @@ export function EventCard({
   const badge = STATUS_BADGES[event.status] || STATUS_BADGES.scheduled;
   const isPast = new Date(event.date) < new Date();
   const isMatch = event.type === "match";
+  const isTournament = !!event.tournamentId;
+  const isCompleted = event.status === "completed";
+  const isUpcoming = event.status === "scheduled" && !isPast;
+
+  // Determine top bar color based on status and tournament
+  const getTopBarColor = () => {
+    if (event.status === "cancelled") {
+      return "bg-gray-300";
+    }
+    if (isTournament) {
+      // Tournament matches: green to purple gradient
+      if (isCompleted) {
+        return "bg-gradient-to-r from-cyan-500 to-purple-500";
+      }
+      return "bg-gradient-to-r from-green-500 to-purple-500";
+    }
+    if (isMatch) {
+      // Regular matches
+      if (isCompleted) {
+        return "bg-cyan-500";
+      }
+      if (isUpcoming) {
+        return "bg-green-500";
+      }
+      return "bg-green-500"; // default for scheduled
+    }
+    // Trainings
+    return "bg-green-500";
+  };
 
   return (
     <Card
@@ -94,11 +123,7 @@ export function EventCard({
       }`}
     >
       {/* Colored top bar */}
-      <div
-        className={`h-1.5 ${
-          isMatch ? "bg-red-500" : "bg-green-500"
-        } ${event.status === "cancelled" ? "bg-gray-300" : ""}`}
-      />
+      <div className={`h-1.5 ${getTopBarColor()}`} />
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0 space-y-2">
