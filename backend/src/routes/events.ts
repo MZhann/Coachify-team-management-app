@@ -39,13 +39,18 @@ router.get("/", async (req: AuthRequest, res: Response): Promise<void> => {
       return;
     }
 
-    const filter: any = { teamId };
+    // Find events where the team is home OR away
+    const filter: any = {
+      $or: [{ teamId }, { awayTeamId: teamId }],
+    };
     if (type === "training" || type === "match") {
       filter.type = type;
     }
 
     const events = await Event.find(filter)
       .populate("createdBy", "name")
+      .populate("teamId", "name sport")
+      .populate("awayTeamId", "name sport")
       .sort({ date: 1 })
       .lean();
 
@@ -61,6 +66,8 @@ router.get("/:id", async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const event = await Event.findById(req.params.id)
       .populate("createdBy", "name")
+      .populate("teamId", "name sport")
+      .populate("awayTeamId", "name sport")
       .lean();
 
     if (!event) {
@@ -68,16 +75,28 @@ router.get("/:id", async (req: AuthRequest, res: Response): Promise<void> => {
       return;
     }
 
-    const access = await checkTeamAccess(
+    // Check access via home team OR away team
+    const homeAccess = await checkTeamAccess(
       event.teamId.toString(),
       req.user!.userId
     );
-    if (!access.ok) {
+    let awayAccess = { ok: false, isCoach: false };
+    if (event.awayTeamId) {
+      awayAccess = await checkTeamAccess(
+        event.awayTeamId.toString(),
+        req.user!.userId
+      );
+    }
+
+    if (!homeAccess.ok && !awayAccess.ok) {
       res.status(403).json({ error: "No access" });
       return;
     }
 
-    res.json({ ...event, isCoach: access.isCoach });
+    res.json({
+      ...event,
+      isCoach: homeAccess.isCoach || awayAccess.isCoach,
+    });
   } catch (err) {
     console.error("Event detail error:", err);
     res.status(500).json({ error: "Failed to fetch event" });

@@ -24,7 +24,8 @@ import { useState } from "react";
 
 export interface EventData {
   _id: string;
-  teamId: string;
+  teamId: string | { _id: string; name: string; sport?: string };
+  awayTeamId?: string | { _id: string; name: string; sport?: string };
   type: "training" | "match";
   title: string;
   description: string;

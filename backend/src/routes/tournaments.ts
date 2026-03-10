@@ -511,6 +511,7 @@ router.post(
 
           const event = await Event.create({
             teamId: match.homeTeamId,
+            awayTeamId: match.awayTeamId,
             createdBy: req.user!.userId,
             type: "match",
             title: `${tournament.name}: ${homeTeam?.name || "TBD"} vs ${awayTeam?.name || "TBD"}`,
@@ -624,6 +625,7 @@ router.put(
 
               const event = await Event.create({
                 teamId: nextMatch.homeTeamId,
+                awayTeamId: nextMatch.awayTeamId,
                 createdBy: req.user!.userId,
                 type: "match",
                 title: `${tournament.name}: ${homeTeam?.name || "TBD"} vs ${awayTeam?.name || "TBD"}`,

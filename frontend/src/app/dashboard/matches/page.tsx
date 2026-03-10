@@ -56,10 +56,17 @@ export default function MatchesPage() {
         })
       );
 
-      allEvents.sort(
+      // Deduplicate (same event can appear for home + away team)
+      const seen = new Set<string>();
+      const unique = allEvents.filter((e) => {
+        if (seen.has(e._id)) return false;
+        seen.add(e._id);
+        return true;
+      });
+      unique.sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
-      setEvents(allEvents);
+      setEvents(unique);
     } catch {
       // silently fail
     } finally {
@@ -98,7 +105,13 @@ export default function MatchesPage() {
 
   // Filters
   const filtered = events.filter((e) => {
-    if (filterTeam !== "all" && e.teamId !== filterTeam) return false;
+    if (filterTeam !== "all") {
+      const homeId = typeof e.teamId === "object" ? e.teamId._id : e.teamId;
+      const awayId = e.awayTeamId
+        ? typeof e.awayTeamId === "object" ? e.awayTeamId._id : e.awayTeamId
+        : null;
+      if (homeId !== filterTeam && awayId !== filterTeam) return false;
+    }
     if (filterStatus !== "all" && e.status !== filterStatus) return false;
     return true;
   });

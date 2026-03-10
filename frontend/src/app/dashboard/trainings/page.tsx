@@ -59,11 +59,17 @@ export default function TrainingsPage() {
         })
       );
 
-      // Sort by date ascending
-      allEvents.sort(
+      // Deduplicate and sort by date ascending
+      const seen = new Set<string>();
+      const unique = allEvents.filter((e) => {
+        if (seen.has(e._id)) return false;
+        seen.add(e._id);
+        return true;
+      });
+      unique.sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
-      setEvents(allEvents);
+      setEvents(unique);
     } catch {
       // silently fail
     } finally {
@@ -102,7 +108,10 @@ export default function TrainingsPage() {
 
   // Filter events
   const filtered = events.filter((e) => {
-    if (filterTeam !== "all" && e.teamId !== filterTeam) return false;
+    if (filterTeam !== "all") {
+      const tid = typeof e.teamId === "object" ? e.teamId._id : e.teamId;
+      if (tid !== filterTeam) return false;
+    }
     if (filterStatus !== "all" && e.status !== filterStatus) return false;
     return true;
   });

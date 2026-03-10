@@ -6,6 +6,7 @@ export type EventStatus = "scheduled" | "completed" | "cancelled";
 export interface IEvent {
   _id: mongoose.Types.ObjectId;
   teamId: mongoose.Types.ObjectId;
+  awayTeamId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
   type: EventType;
   title: string;
@@ -31,6 +32,7 @@ export interface IEvent {
 const EventSchema = new Schema<IEvent>(
   {
     teamId: { type: Schema.Types.ObjectId, ref: "Team", required: true },
+    awayTeamId: { type: Schema.Types.ObjectId, ref: "Team" },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     type: {
       type: String,
@@ -67,6 +69,7 @@ const EventSchema = new Schema<IEvent>(
 // Index for efficient team + date queries
 EventSchema.index({ teamId: 1, date: 1 });
 EventSchema.index({ teamId: 1, type: 1, date: 1 });
+EventSchema.index({ awayTeamId: 1, date: 1 });
 
 export const Event: Model<IEvent> =
   mongoose.models.Event || mongoose.model<IEvent>("Event", EventSchema);

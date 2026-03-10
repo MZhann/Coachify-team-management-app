@@ -54,7 +54,7 @@ export function EventFormDialog({
   useEffect(() => {
     if (editEvent) {
       setType(editEvent.type);
-      setTeamId(editEvent.teamId);
+      setTeamId(typeof editEvent.teamId === "object" ? editEvent.teamId._id : editEvent.teamId);
       setTitle(editEvent.title);
       setDescription(editEvent.description || "");
       const d = new Date(editEvent.date);

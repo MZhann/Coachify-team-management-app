@@ -55,31 +55,37 @@ router.get("/", async (req: AuthRequest, res: Response): Promise<void> => {
     const thirtyDaysLater = new Date();
     thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
 
+    const teamFilter = {
+      $or: [{ teamId: { $in: teamIds } }, { awayTeamId: { $in: teamIds } }],
+    };
+
     const upcomingEvents = await Event.find({
-      teamId: { $in: teamIds },
+      ...teamFilter,
       date: { $gte: now, $lte: thirtyDaysLater },
       status: "scheduled",
     })
       .populate("createdBy", "name")
       .populate("teamId", "name sport")
+      .populate("awayTeamId", "name sport")
       .sort({ date: 1 })
       .limit(15)
       .lean();
 
     // 5. Recent completed matches (last 10)
     const recentMatches = await Event.find({
-      teamId: { $in: teamIds },
+      ...teamFilter,
       type: "match",
       status: "completed",
     })
       .populate("teamId", "name sport")
+      .populate("awayTeamId", "name sport")
       .sort({ date: -1 })
       .limit(10)
       .lean();
 
     // 6. Match record (W/D/L)
     const allCompletedMatches = await Event.find({
-      teamId: { $in: teamIds },
+      ...teamFilter,
       type: "match",
       status: "completed",
     }).lean();
@@ -87,13 +93,13 @@ router.get("/", async (req: AuthRequest, res: Response): Promise<void> => {
     let wins = 0;
     let draws = 0;
     let losses = 0;
+    const teamIdSet = new Set(teamIds.map((id: any) => id.toString()));
     for (const m of allCompletedMatches) {
       if (m.scoreHome != null && m.scoreAway != null) {
-        // Determine OUR score vs OPPONENT score based on home/away
-        const ourScore =
-          m.homeAway === "away" ? m.scoreAway : m.scoreHome;
-        const theirScore =
-          m.homeAway === "away" ? m.scoreHome : m.scoreAway;
+        // Determine if our team is home or away
+        const ourTeamIsHome = teamIdSet.has(m.teamId.toString());
+        const ourScore = ourTeamIsHome ? m.scoreHome : m.scoreAway;
+        const theirScore = ourTeamIsHome ? m.scoreAway : m.scoreHome;
 
         if (ourScore > theirScore) wins++;
         else if (ourScore === theirScore) draws++;
