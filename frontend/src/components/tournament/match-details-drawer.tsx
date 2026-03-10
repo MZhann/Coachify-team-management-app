@@ -45,6 +45,7 @@ interface MatchDetail {
   location?: string;
   homeAway?: string;
   nextMatchNumber?: number;
+  nextMatchSlot?: "home" | "away";
 }
 
 interface EventDetail {
