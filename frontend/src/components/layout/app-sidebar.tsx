@@ -10,11 +10,13 @@ import {
   BarChart3,
   LogOut,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { JoinTeamDialog } from "@/components/dashboard/join-team-dialog";
+import { useSidebar } from "@/components/layout/dashboard-shell";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -32,11 +34,11 @@ interface AppSidebarProps {
 export function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { open, close } = useSidebar();
 
   async function handleLogout(e: React.FormEvent) {
     e.preventDefault();
     await fetch("/api/auth/logout", { method: "POST" });
-    // Clear the auth cookie on client side
     document.cookie = "coachify_token=; path=/; max-age=0";
     router.push("/login");
     router.refresh();
@@ -49,9 +51,20 @@ export function AppSidebar({ user }: AppSidebarProps) {
     .toUpperCase()
     .slice(0, 2);
 
-  return (
-    <aside className="flex h-full w-64 flex-col bg-coachify-sidebar text-white">
-      <nav className="flex flex-1 flex-col gap-1 p-4">
+  const sidebarContent = (
+    <>
+      {/* Mobile close button */}
+      <div className="flex items-center justify-between p-4 md:hidden">
+        <span className="text-lg font-bold">Coachify</span>
+        <button
+          onClick={close}
+          className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      <nav className="flex flex-1 flex-col gap-1 p-4 pt-0 md:pt-4">
         {navItems.map((item) => {
           const isActive =
             item.href === "/dashboard"
@@ -62,6 +75,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={close}
               className={cn(
                 "flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
@@ -78,7 +92,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
           );
         })}
 
-        {/* Join Team button — visible for all users (especially players) */}
+        {/* Join Team button */}
         <div className="mt-4 pt-4 border-t border-white/20">
           <JoinTeamDialog />
         </div>
@@ -120,6 +134,31 @@ export function AppSidebar({ user }: AppSidebarProps) {
           </Button>
         </form>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar — always visible */}
+      <aside className="hidden md:flex h-full w-64 shrink-0 flex-col bg-coachify-sidebar text-white">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile overlay sidebar */}
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={close}
+        />
+      )}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-coachify-sidebar text-white transition-transform duration-300 ease-in-out md:hidden",
+          open ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {sidebarContent}
+      </aside>
+    </>
   );
 }
