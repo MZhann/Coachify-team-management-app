@@ -18,6 +18,9 @@ export interface IEvent {
   homeAway?: "home" | "away" | "neutral";
   scoreHome?: number;
   scoreAway?: number;
+  // Tournament link
+  tournamentId?: mongoose.Types.ObjectId;
+  tournamentMatchNumber?: number;
   // Common
   status: EventStatus;
   notes: string;
@@ -47,6 +50,9 @@ const EventSchema = new Schema<IEvent>(
     },
     scoreHome: { type: Number },
     scoreAway: { type: Number },
+    // Tournament link
+    tournamentId: { type: Schema.Types.ObjectId, ref: "Tournament" },
+    tournamentMatchNumber: { type: Number },
     // Common
     status: {
       type: String,

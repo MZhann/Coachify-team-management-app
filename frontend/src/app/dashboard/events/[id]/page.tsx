@@ -14,6 +14,7 @@ import {
   BarChart3,
   Save,
   CheckCircle2,
+  Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,8 @@ interface EventData {
   homeAway?: "home" | "away" | "neutral";
   scoreHome?: number;
   scoreAway?: number;
+  tournamentId?: string;
+  tournamentMatchNumber?: number;
   status: "scheduled" | "completed" | "cancelled";
   notes: string;
   createdBy?: { _id: string; name: string };
@@ -450,6 +453,15 @@ export default function EventDetailPage() {
                 >
                   {isMatch ? "Match" : "Training"}
                 </span>
+                {event.tournamentId && (
+                  <Link
+                    href={`/dashboard/tournaments/${event.tournamentId}`}
+                    className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+                  >
+                    <Trophy className="mr-1 h-3 w-3" />
+                    Tournament
+                  </Link>
+                )}
               </div>
 
               {isMatch && event.opponent && (

@@ -5,6 +5,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { connectDB } from "./config/db";
 import authRoutes from "./routes/auth";
 import teamRoutes from "./routes/teams";
@@ -13,7 +14,9 @@ import matchStatRoutes from "./routes/match-stats";
 import attendanceRoutes from "./routes/attendance";
 import noteRoutes from "./routes/notes";
 import dashboardRoutes from "./routes/dashboard";
+import tournamentRoutes from "./routes/tournaments";
 import { Team } from "./models/Team";
+import { User } from "./models/User";
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "5000", 10);
@@ -48,6 +51,7 @@ app.use("/api/match-stats", matchStatRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/tournaments", tournamentRoutes);
 
 // Health check — useful for Railway / uptime monitors
 app.get("/api/health", (_req, res) => {
@@ -90,6 +94,26 @@ async function migrateTeamInviteCodes() {
   }
 }
 
+/* ───── Seed admin account ───── */
+async function seedAdmin() {
+  try {
+    const adminEmail = "admin@gmail.com";
+    const existing = await User.findOne({ email: adminEmail });
+    if (!existing) {
+      const hashedPassword = await bcrypt.hash("Qwerty1234", 12);
+      await User.create({
+        email: adminEmail,
+        password: hashedPassword,
+        name: "Admin",
+        role: "admin",
+      });
+      console.log(`Admin account created: ${adminEmail}`);
+    }
+  } catch (err) {
+    console.warn("Admin seed skipped:", (err as Error).message);
+  }
+}
+
 /* ───── Start ───── */
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Coachify backend running on port ${PORT}`);
@@ -97,7 +121,10 @@ app.listen(PORT, "0.0.0.0", () => {
 
 // Attempt initial MongoDB connection (non-blocking)
 connectDB()
-  .then(() => migrateTeamInviteCodes())
+  .then(async () => {
+    await migrateTeamInviteCodes();
+    await seedAdmin();
+  })
   .catch((err) => {
     console.warn(
       "Initial MongoDB connection failed. The server is running but DB calls will retry per-request.",

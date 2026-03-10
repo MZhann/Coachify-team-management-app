@@ -12,6 +12,7 @@ import {
   XCircle,
   Users,
   BarChart3,
+  Trophy,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,8 @@ export interface EventData {
   homeAway?: "home" | "away" | "neutral";
   scoreHome?: number;
   scoreAway?: number;
+  tournamentId?: string;
+  tournamentMatchNumber?: number;
   status: "scheduled" | "completed" | "cancelled";
   notes: string;
   createdBy?: { _id: string; name: string };
@@ -113,6 +116,16 @@ export function EventCard({
                   <Swords className="mr-1 h-3 w-3" />
                   Match
                 </span>
+              )}
+              {event.tournamentId && (
+                <Link
+                  href={`/dashboard/tournaments/${event.tournamentId}`}
+                  className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Trophy className="mr-1 h-3 w-3" />
+                  Tournament
+                </Link>
               )}
             </div>
 

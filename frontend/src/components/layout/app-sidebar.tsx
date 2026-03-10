@@ -99,6 +99,8 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 ? "Head Coach"
                 : user.role === "player"
                 ? "Player"
+                : user.role === "admin"
+                ? "Administrator"
                 : user.role ?? "Coach"}
             </p>
             <div className="mt-0.5 flex items-center gap-1.5">

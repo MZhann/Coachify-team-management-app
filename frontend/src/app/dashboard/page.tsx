@@ -53,6 +53,7 @@ interface EventItem {
   homeAway?: string;
   scoreHome?: number;
   scoreAway?: number;
+  tournamentId?: string;
   status: string;
   notes: string;
 }
@@ -781,6 +782,11 @@ export default function DashboardPage() {
                           {ev.opponent && ` vs ${ev.opponent}`}
                         </p>
                       </div>
+                      {ev.tournamentId && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-50 text-amber-700">
+                          🏆
+                        </span>
+                      )}
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
                           ev.type === "match"
