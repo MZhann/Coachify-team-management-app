@@ -15,7 +15,12 @@ import {
   Save,
   CheckCircle2,
   Trophy,
+  AlertTriangle,
+  Plus,
+  CheckCircle,
 } from "lucide-react";
+import { BadgeUI } from "@/components/ui/badge-ui";
+import { AddDisciplineDialog } from "@/components/discipline/add-record-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -94,7 +99,7 @@ export default function EventDetailPage() {
 
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"attendance" | "stats">("attendance");
+  const [tab, setTab] = useState<"attendance" | "stats" | "discipline">("attendance");
 
   // Attendance
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
@@ -113,6 +118,11 @@ export default function EventDetailPage() {
   const [scoreAway, setScoreAway] = useState<number | "">(0);
   const [scoreSaving, setScoreSaving] = useState(false);
   const [scoreSaved, setScoreSaved] = useState(false);
+
+  // Discipline
+  const [disciplineRecords, setDisciplineRecords] = useState<any[]>([]);
+  const [showDisciplineDialog, setShowDisciplineDialog] = useState(false);
+  const [teams, setTeams] = useState<{ _id: string; name: string }[]>([]);
 
   /* ─── Fetch event ─── */
   const fetchEvent = useCallback(async () => {
@@ -209,9 +219,18 @@ export default function EventDetailPage() {
     );
   }
 
+  const fetchDiscipline = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/discipline?eventId=${id}`);
+      if (res.ok) setDisciplineRecords(await res.json());
+    } catch { /* skip */ }
+  }, [id]);
+
   useEffect(() => {
     fetchEvent();
-  }, [fetchEvent]);
+    fetchDiscipline();
+    fetch("/api/teams").then((r) => r.json()).then(setTeams).catch(() => {});
+  }, [fetchEvent, fetchDiscipline]);
 
   useEffect(() => {
     if (event) {
@@ -650,6 +669,22 @@ export default function EventDetailPage() {
             Match Statistics
           </button>
         )}
+        <button
+          onClick={() => setTab("discipline")}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            tab === "discipline"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <AlertTriangle className="h-4 w-4" />
+          Discipline
+          {disciplineRecords.length > 0 && (
+            <span className="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">
+              {disciplineRecords.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* ─── Attendance Tab ─── */}
@@ -1075,6 +1110,76 @@ export default function EventDetailPage() {
               )}
             </>
           )}
+        </div>
+      )}
+      {/* ─── Discipline Tab ─── */}
+      {tab === "discipline" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700">
+              Disciplinary Records for this Event
+            </h3>
+            {event.isCoach && (
+              <Button size="sm" onClick={() => setShowDisciplineDialog(true)} className="gap-1">
+                <Plus className="h-3 w-3" /> Record Violation
+              </Button>
+            )}
+          </div>
+
+          {disciplineRecords.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <AlertTriangle className="h-10 w-10 text-gray-300 mb-3" />
+                <p className="text-sm text-gray-500">No disciplinary records for this event</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {disciplineRecords.map((dr: any) => {
+                const VIO_LABELS: Record<string, string> = {
+                  yellow_card: "Yellow Card", red_card: "Red Card", warning: "Warning",
+                  verbal_warning: "Verbal Warning", fine: "Fine", suspension: "Suspension",
+                  unexcused_absence: "Unexcused Absence", late_arrival: "Late Arrival",
+                  misconduct: "Misconduct", other: "Other",
+                };
+                const SEV: Record<string, { variant: "success" | "warning" | "destructive"; label: string }> = {
+                  low: { variant: "success", label: "Low" }, medium: { variant: "warning", label: "Medium" },
+                  high: { variant: "destructive", label: "High" }, critical: { variant: "destructive", label: "Critical" },
+                };
+                const s = SEV[dr.severity] || SEV.low;
+                const playerName = dr.playerId?.userId?.name || "Unknown";
+                return (
+                  <Card key={dr._id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${dr.resolved ? "bg-green-100" : "bg-red-100"}`}>
+                          {dr.resolved ? <CheckCircle className="h-4 w-4 text-green-600" /> : <AlertTriangle className="h-4 w-4 text-red-600" />}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium text-gray-900">{playerName}</span>
+                            <span className="text-gray-500 text-sm">—</span>
+                            <span className="text-sm text-gray-700">{VIO_LABELS[dr.violationType] || dr.violationType}</span>
+                            <BadgeUI variant={s.variant}>{s.label}</BadgeUI>
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1">{dr.description}</p>
+                          <p className="text-xs text-gray-400 mt-1">{new Date(dr.date).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          <AddDisciplineDialog
+            open={showDisciplineDialog}
+            onClose={() => setShowDisciplineDialog(false)}
+            onCreated={fetchDiscipline}
+            teams={teams}
+            preselectedEventId={id}
+          />
         </div>
       )}
     </div>

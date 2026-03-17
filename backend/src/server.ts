@@ -15,6 +15,8 @@ import attendanceRoutes from "./routes/attendance";
 import noteRoutes from "./routes/notes";
 import dashboardRoutes from "./routes/dashboard";
 import tournamentRoutes from "./routes/tournaments";
+import disciplineRoutes from "./routes/discipline";
+import badgeRoutes from "./routes/badges";
 import { Team } from "./models/Team";
 import { User } from "./models/User";
 
@@ -52,6 +54,8 @@ app.use("/api/attendance", attendanceRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/tournaments", tournamentRoutes);
+app.use("/api/discipline", disciplineRoutes);
+app.use("/api/badges", badgeRoutes);
 
 // Health check — useful for Railway / uptime monitors
 app.get("/api/health", (_req, res) => {

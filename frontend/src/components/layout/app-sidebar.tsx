@@ -11,6 +11,7 @@ import {
   LogOut,
   ChevronRight,
   X,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/dashboard/players", label: "Players", icon: Users },
   { href: "/dashboard/trainings", label: "Trainings", icon: Calendar },
   { href: "/dashboard/matches", label: "Matches", icon: Trophy },
+  { href: "/dashboard/discipline", label: "Discipline", icon: ClipboardList },
   { href: "/dashboard/tournaments", label: "Tournaments", icon: Trophy },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
 ];

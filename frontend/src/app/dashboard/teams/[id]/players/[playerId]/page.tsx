@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Save, User } from "lucide-react";
+import { ArrowLeft, Loader2, Save, User, Award, AlertTriangle, Plus, CheckCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,6 +12,43 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { RadarChart } from "@/components/player/radar-chart";
+import { BadgeUI } from "@/components/ui/badge-ui";
+import { AwardBadgeDialog } from "@/components/badges/award-badge-dialog";
+import { AddDisciplineDialog } from "@/components/discipline/add-record-dialog";
+
+interface PlayerBadgeData {
+  _id: string;
+  badgeId: { _id: string; name: string; description: string; icon: string; category: string; color: string };
+  awardedBy: { name: string };
+  awardedAt: string;
+  note?: string;
+}
+
+interface DisciplineRecord {
+  _id: string;
+  violationType: string;
+  severity: string;
+  description: string;
+  date: string;
+  eventId?: { _id: string; title: string; opponent?: string };
+  resolved: boolean;
+  fineAmount?: number;
+  suspensionDays?: number;
+}
+
+const VIOLATION_LABELS: Record<string, string> = {
+  yellow_card: "Yellow Card", red_card: "Red Card", warning: "Warning",
+  verbal_warning: "Verbal Warning", fine: "Fine", suspension: "Suspension",
+  unexcused_absence: "Unexcused Absence", late_arrival: "Late Arrival",
+  misconduct: "Misconduct", other: "Other",
+};
+
+const SEV_CONFIG: Record<string, { variant: "success" | "warning" | "destructive"; label: string }> = {
+  low: { variant: "success", label: "Low" },
+  medium: { variant: "warning", label: "Medium" },
+  high: { variant: "destructive", label: "High" },
+  critical: { variant: "destructive", label: "Critical" },
+};
 
 /* ───── Types ───── */
 interface PlayerStats {
@@ -187,6 +224,12 @@ export default function PlayerProfilePage() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [badges, setBadges] = useState<PlayerBadgeData[]>([]);
+  const [disciplineRecords, setDisciplineRecords] = useState<DisciplineRecord[]>([]);
+  const [showBadgeDialog, setShowBadgeDialog] = useState(false);
+  const [showDisciplineDialog, setShowDisciplineDialog] = useState(false);
+  const [teams, setTeams] = useState<{ _id: string; name: string }[]>([]);
+
   // Editable state
   const [editBio, setEditBio] = useState({
     nationality: "",
@@ -216,9 +259,26 @@ export default function PlayerProfilePage() {
     }
   }, [teamId, playerId]);
 
+  const fetchBadges = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/badges/player/${playerId}`);
+      if (res.ok) setBadges(await res.json());
+    } catch { /* skip */ }
+  }, [playerId]);
+
+  const fetchDiscipline = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/discipline?playerId=${playerId}`);
+      if (res.ok) setDisciplineRecords(await res.json());
+    } catch { /* skip */ }
+  }, [playerId]);
+
   useEffect(() => {
     fetchPlayer();
-  }, [fetchPlayer]);
+    fetchBadges();
+    fetchDiscipline();
+    fetch("/api/teams").then((r) => r.json()).then(setTeams).catch(() => {});
+  }, [fetchPlayer, fetchBadges, fetchDiscipline]);
 
   function startEditing() {
     if (!player) return;
@@ -629,6 +689,96 @@ export default function PlayerProfilePage() {
           ))}
         </div>
       </div>
+
+      {/* Badges & Achievements */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Award className="h-5 w-5 text-amber-500" />
+            Badges & Achievements ({badges.length})
+          </CardTitle>
+          {player.isCoach && (
+            <Button size="sm" variant="outline" onClick={() => setShowBadgeDialog(true)} className="gap-1">
+              <Plus className="h-3 w-3" /> Award Badge
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {badges.length === 0 ? (
+            <p className="py-4 text-center text-sm text-gray-400">No badges earned yet</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {badges.map((pb) => (
+                <div key={pb._id} className="flex items-start gap-3 rounded-lg border border-gray-200 p-3 hover:border-gray-300 transition-colors">
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${pb.badgeId.color} text-xl`}>
+                    {pb.badgeId.icon}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-gray-900 text-sm">{pb.badgeId.name}</p>
+                    <p className="text-xs text-gray-500">{pb.badgeId.description}</p>
+                    <p className="mt-1 text-xs text-gray-400">
+                      Awarded by {pb.awardedBy.name} on {new Date(pb.awardedAt).toLocaleDateString()}
+                    </p>
+                    {pb.note && <p className="text-xs italic text-gray-400 mt-0.5">&quot;{pb.note}&quot;</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Discipline History */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <AlertTriangle className="h-5 w-5 text-red-500" />
+            Discipline History ({disciplineRecords.length})
+          </CardTitle>
+          {player.isCoach && (
+            <Button size="sm" variant="outline" onClick={() => setShowDisciplineDialog(true)} className="gap-1">
+              <Plus className="h-3 w-3" /> Record Violation
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {disciplineRecords.length === 0 ? (
+            <p className="py-4 text-center text-sm text-gray-400">Clean record — no disciplinary actions</p>
+          ) : (
+            <div className="space-y-3">
+              {disciplineRecords.map((dr) => {
+                const sev = SEV_CONFIG[dr.severity] || SEV_CONFIG.low;
+                return (
+                  <div key={dr._id} className="flex items-start gap-3 rounded-lg border border-gray-200 p-3">
+                    <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${dr.resolved ? "bg-green-100" : "bg-red-100"}`}>
+                      {dr.resolved ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Clock className="h-4 w-4 text-red-600" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-gray-900 text-sm">{VIOLATION_LABELS[dr.violationType] || dr.violationType}</span>
+                        <BadgeUI variant={sev.variant}>{sev.label}</BadgeUI>
+                        {dr.resolved ? <BadgeUI variant="success">Resolved</BadgeUI> : <BadgeUI variant="warning">Pending</BadgeUI>}
+                      </div>
+                      <p className="text-xs text-gray-600 mt-1">{dr.description}</p>
+                      <div className="mt-1 flex flex-wrap gap-x-4 text-xs text-gray-400">
+                        <span>{new Date(dr.date).toLocaleDateString()}</span>
+                        {dr.eventId && <span>Match: {dr.eventId.title || `vs ${dr.eventId.opponent}`}</span>}
+                        {dr.fineAmount != null && <span>Fine: ${dr.fineAmount}</span>}
+                        {dr.suspensionDays != null && <span>Suspension: {dr.suspensionDays} days</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dialogs */}
+      <AwardBadgeDialog open={showBadgeDialog} onClose={() => setShowBadgeDialog(false)} onAwarded={fetchBadges} playerId={playerId} />
+      <AddDisciplineDialog open={showDisciplineDialog} onClose={() => setShowDisciplineDialog(false)} onCreated={fetchDiscipline}
+        teams={teams} preselectedPlayerId={playerId} preselectedTeamId={teamId} />
     </div>
   );
 }
