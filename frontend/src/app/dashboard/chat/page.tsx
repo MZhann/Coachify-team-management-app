@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { io, Socket } from "socket.io-client";
 import {
   MessageCircle,
   Send,
-  Users,
   Globe,
   Hash,
   Loader2,
@@ -42,14 +40,7 @@ const SPORT_ICONS: Record<string, string> = {
   american_football: "\uD83C\uDFC8",
 };
 
-function getToken(): string | undefined {
-  return document.cookie
-    .split(";")
-    .find((c) => c.trim().startsWith("coachify_token="))
-    ?.split("=")
-    .slice(1)
-    .join("=");
-}
+const POLL_INTERVAL = 3000;
 
 function getRoleBadge(role: string, teamName?: string) {
   if (role === "admin") {
@@ -68,7 +59,8 @@ function getRoleBadge(role: string, teamName?: string) {
   }
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
-      <UserIcon className="h-3 w-3" /> Player{teamName ? ` from ${teamName}` : ""}
+      <UserIcon className="h-3 w-3" /> Player
+      {teamName ? ` from ${teamName}` : ""}
     </span>
   );
 }
@@ -95,7 +87,6 @@ function dateLabel(iso: string) {
 }
 
 export default function ChatPage() {
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [activeTab, setActiveTab] = useState<"global" | "team">("global");
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [teams, setTeams] = useState<TeamInfo[]>([]);
@@ -103,17 +94,21 @@ export default function ChatPage() {
   const [teamMessages, setTeamMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const shouldScrollRef = useRef(true);
+  const prevMsgCountRef = useRef(0);
 
-  const scrollToBottom = useCallback(() => {
+  const scrollToBottom = useCallback((force = false) => {
+    if (!force && !shouldScrollRef.current) return;
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+    }, 50);
   }, []);
 
-  // Fetch current user info
+  // Fetch current user
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => r.json())
@@ -136,84 +131,118 @@ export default function ChatPage() {
       .catch(() => {});
   }, []);
 
-  // Connect Socket.IO
-  useEffect(() => {
-    const backendUrl =
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-    const token = getToken();
-
-    const s = io(backendUrl, {
-      auth: { token },
-      withCredentials: true,
-      transports: ["websocket", "polling"],
-    });
-
-    s.on("connect", () => {
-      console.log("Socket connected");
-    });
-
-    s.on("chat:global:message", (msg: ChatMessage) => {
-      setGlobalMessages((prev) => [...prev, msg]);
-    });
-
-    s.on("chat:team:message", (msg: ChatMessage) => {
-      setTeamMessages((prev) => [...prev, msg]);
-    });
-
-    setSocket(s);
-
-    return () => {
-      s.disconnect();
-    };
+  // Fetch global messages + poll
+  const fetchGlobal = useCallback(async (initial = false) => {
+    try {
+      if (initial) setLoading(true);
+      const res = await fetch("/api/chat/global");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setGlobalMessages((prev) => {
+            if (data.length !== prev.length) {
+              shouldScrollRef.current = true;
+            }
+            return data;
+          });
+        }
+      }
+    } catch {
+    } finally {
+      if (initial) setLoading(false);
+    }
   }, []);
 
-  // Fetch global history
   useEffect(() => {
-    setLoading(true);
-    fetch("/api/chat/global")
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setGlobalMessages(data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    fetchGlobal(true);
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") fetchGlobal();
+    }, POLL_INTERVAL);
+    return () => clearInterval(id);
+  }, [fetchGlobal]);
 
-  // Fetch team history when selectedTeamId changes
+  // Fetch team messages + poll
+  const fetchTeam = useCallback(
+    async (teamId: string, initial = false) => {
+      if (!teamId) return;
+      try {
+        if (initial) setLoading(true);
+        const res = await fetch(`/api/chat/team/${teamId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setTeamMessages((prev) => {
+              if (data.length !== prev.length) {
+                shouldScrollRef.current = true;
+              }
+              return data;
+            });
+          }
+        }
+      } catch {
+      } finally {
+        if (initial) setLoading(false);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     if (!selectedTeamId) return;
-    setLoading(true);
-    fetch(`/api/chat/team/${selectedTeamId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setTeamMessages(data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [selectedTeamId]);
+    fetchTeam(selectedTeamId, true);
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible")
+        fetchTeam(selectedTeamId);
+    }, POLL_INTERVAL);
+    return () => clearInterval(id);
+  }, [selectedTeamId, fetchTeam]);
 
-  // Scroll when messages change
-  useEffect(() => {
-    scrollToBottom();
-  }, [globalMessages, teamMessages, activeTab, scrollToBottom]);
-
-  function handleSend() {
-    if (!input.trim() || !socket) return;
-
-    if (activeTab === "global") {
-      socket.emit("chat:global", { content: input.trim() });
-    } else if (selectedTeamId) {
-      socket.emit("chat:team", {
-        teamId: selectedTeamId,
-        content: input.trim(),
-      });
-    }
-
-    setInput("");
-    inputRef.current?.focus();
-  }
-
+  // Scroll on new messages
   const messages = activeTab === "global" ? globalMessages : teamMessages;
+  useEffect(() => {
+    if (messages.length !== prevMsgCountRef.current) {
+      scrollToBottom();
+      prevMsgCountRef.current = messages.length;
+    }
+  }, [messages, scrollToBottom]);
+
+  // Scroll on tab switch
+  useEffect(() => {
+    shouldScrollRef.current = true;
+    scrollToBottom(true);
+  }, [activeTab, selectedTeamId, scrollToBottom]);
+
+  async function handleSend() {
+    if (!input.trim() || sending) return;
+    const text = input.trim();
+    setInput("");
+    setSending(true);
+
+    try {
+      const res = await fetch("/api/chat/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          activeTab === "global"
+            ? { channel: "global", content: text }
+            : { channel: "team", teamId: selectedTeamId, content: text }
+        ),
+      });
+
+      if (res.ok) {
+        shouldScrollRef.current = true;
+        if (activeTab === "global") {
+          await fetchGlobal();
+        } else {
+          await fetchTeam(selectedTeamId);
+        }
+      }
+    } catch {
+    } finally {
+      setSending(false);
+      inputRef.current?.focus();
+    }
+  }
 
   // Group messages by date
   const groupedMessages: { date: string; msgs: ChatMessage[] }[] = [];
@@ -321,9 +350,7 @@ export default function ChatPage() {
                 }}
                 className={cn(
                   "rounded-lg px-3 py-1.5 text-sm font-medium border-0 bg-transparent",
-                  activeTab === "team"
-                    ? "text-blue-700"
-                    : "text-gray-500"
+                  activeTab === "team" ? "text-blue-700" : "text-gray-500"
                 )}
               >
                 <option value="" disabled>
@@ -444,9 +471,7 @@ export default function ChatPage() {
                               <div
                                 className={cn(
                                   "mb-1 flex items-center gap-2 flex-wrap",
-                                  isOwn
-                                    ? "flex-row-reverse"
-                                    : ""
+                                  isOwn ? "flex-row-reverse" : ""
                                 )}
                               >
                                 <span className="text-xs font-semibold text-gray-900">
@@ -503,14 +528,19 @@ export default function ChatPage() {
                     : `Message ${teams.find((t) => t._id === selectedTeamId)?.name || "team"}...`
                 }
                 className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm placeholder:text-gray-400 focus:border-blue-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
+                disabled={sending}
               />
               <Button
                 onClick={handleSend}
-                disabled={!input.trim()}
+                disabled={!input.trim() || sending}
                 size="icon"
                 className="h-10 w-10 rounded-xl"
               >
-                <Send className="h-4 w-4" />
+                {sending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
             </div>
           </div>

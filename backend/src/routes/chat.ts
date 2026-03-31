@@ -134,4 +134,90 @@ router.get(
   }
 );
 
+/* ─── POST /api/chat/send — send a message via REST ─── */
+router.post(
+  "/send",
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.userId;
+      const userName = req.user!.name;
+      const userRole = req.user!.role;
+      const { channel, teamId, content } = req.body;
+
+      if (!content?.trim()) {
+        res.status(400).json({ error: "Content is required" });
+        return;
+      }
+
+      if (channel !== "global" && channel !== "team") {
+        res.status(400).json({ error: "Channel must be global or team" });
+        return;
+      }
+
+      if (channel === "team" && !teamId) {
+        res.status(400).json({ error: "teamId required for team channel" });
+        return;
+      }
+
+      // Resolve sender's team name for display
+      let senderTeamName: string | undefined;
+
+      if (channel === "team") {
+        const team = await Team.findById(teamId).select("name coachId").lean();
+        if (!team) {
+          res.status(404).json({ error: "Team not found" });
+          return;
+        }
+
+        // Verify membership
+        const isCoach =
+          (userRole === "coach" || userRole === "admin") &&
+          team.coachId.toString() === userId;
+        const isPlayer = await Player.exists({ userId, teamId });
+        const isAdmin = userRole === "admin";
+
+        if (!isCoach && !isPlayer && !isAdmin) {
+          res.status(403).json({ error: "Not a member of this team" });
+          return;
+        }
+
+        senderTeamName = team.name;
+      } else {
+        // Global: find first team for the tag
+        if (userRole === "coach") {
+          const team = await Team.findOne({ coachId: userId })
+            .select("name")
+            .lean();
+          if (team) senderTeamName = team.name;
+        } else if (userRole === "player") {
+          const membership = await Player.findOne({ userId })
+            .select("teamId")
+            .lean();
+          if (membership) {
+            const team = await Team.findById(membership.teamId)
+              .select("name")
+              .lean();
+            if (team) senderTeamName = team.name;
+          }
+        }
+      }
+
+      const msg = await Message.create({
+        channel,
+        teamId: channel === "team" ? teamId : undefined,
+        senderId: userId,
+        senderName: userName,
+        senderRole: userRole,
+        senderTeamName,
+        content: content.trim().slice(0, 2000),
+      });
+
+      res.status(201).json(msg.toObject());
+    } catch (err) {
+      console.error("Chat send error:", err);
+      res.status(500).json({ error: "Failed to send message" });
+    }
+  }
+);
+
 export default router;
