@@ -12,6 +12,7 @@ import {
   ChevronRight,
   X,
   ClipboardList,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/dashboard/discipline", label: "Discipline", icon: ClipboardList },
   { href: "/dashboard/tournaments", label: "Tournaments", icon: Trophy },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/dashboard/chat", label: "Chat", icon: MessageCircle },
 ];
 
 interface AppSidebarProps {
