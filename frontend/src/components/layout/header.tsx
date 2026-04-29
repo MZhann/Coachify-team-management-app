@@ -2,6 +2,7 @@
 
 import { Search, Menu } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSidebar } from "@/components/layout/dashboard-shell";
@@ -32,9 +33,14 @@ export function Header({ user }: HeaderProps) {
       </button>
 
       <Link href="/dashboard" className="flex items-center gap-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500">
-          <span className="text-lg font-bold text-white">C</span>
-        </div>
+        <Image
+          src="/coachify-logo.png"
+          alt="Coachify"
+          width={36}
+          height={36}
+          className="h-9 w-9 rounded-full object-cover"
+          priority
+        />
         <span className="text-xl font-bold text-gray-800 hidden sm:inline">
           Coachify
         </span>
